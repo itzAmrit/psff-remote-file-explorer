@@ -1,0 +1,1606 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
+  <title>TSFF Finder</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-top: #1d2128;
+      --bg-bottom: #12161c;
+      --window: rgba(29, 33, 40, 0.95);
+      --sidebar: rgba(38, 43, 52, 0.96);
+      --toolbar: rgba(52, 58, 68, 0.92);
+      --content: rgba(247, 248, 250, 0.96);
+      --content-line: rgba(13, 18, 26, 0.08);
+      --sidebar-line: rgba(255, 255, 255, 0.08);
+      --text: #11161e;
+      --muted: #5f6b79;
+      --sidebar-text: #e9edf3;
+      --sidebar-muted: #b5c0cb;
+      --accent: #0a84ff;
+      --accent-soft: rgba(10, 132, 255, 0.14);
+      --ok: #248a3d;
+      --danger: #d83b31;
+      --warn: #cc8a00;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.08), transparent 22%),
+        linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+      color: var(--text);
+      padding: 18px;
+    }
+
+    .window {
+      width: min(1480px, 100%);
+      margin: 0 auto;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--window);
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      min-height: calc(100vh - 36px);
+    }
+
+    .titlebar {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      background: linear-gradient(180deg, rgba(83, 89, 101, 0.92), rgba(57, 63, 73, 0.92));
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--sidebar-text);
+    }
+
+    .traffic {
+      display: flex;
+      gap: 8px;
+    }
+
+    .traffic span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .traffic span:nth-child(1) { background: #ff5f57; }
+    .traffic span:nth-child(2) { background: #ffbd2f; }
+    .traffic span:nth-child(3) { background: #28c840; }
+
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: 0.01em;
+    }
+
+    .title-meta {
+      font-size: 12px;
+      color: var(--sidebar-muted);
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: auto minmax(260px, 0.95fr) minmax(220px, 0.65fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      background: var(--toolbar);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .toolbar-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid rgba(15, 19, 25, 0.16);
+      border-radius: 10px;
+      background: linear-gradient(180deg, #ffffff, #e9edf2);
+      color: #18202a;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+
+    button.secondary {
+      background: linear-gradient(180deg, #eff2f6, #dde3ea);
+    }
+
+    button.primary {
+      background: linear-gradient(180deg, #1d93ff, #0a84ff);
+      border-color: rgba(10,132,255,0.4);
+      color: #fff;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+    }
+
+    button.warn {
+      color: #6e4600;
+      background: linear-gradient(180deg, #ffe3a4, #ffd06d);
+    }
+
+    button.danger {
+      color: #fff;
+      background: linear-gradient(180deg, #f16c63, #dc4f45);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    .pathbar,
+    .jumpbar {
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid rgba(15, 19, 25, 0.12);
+      background: rgba(255, 255, 255, 0.72);
+      padding: 0 12px;
+      font-size: 13px;
+      color: #17202a;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+      color: var(--sidebar-text);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .body {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      min-height: 0;
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, rgba(54, 60, 70, 0.98), rgba(39, 45, 54, 0.98));
+      color: var(--sidebar-text);
+      border-right: 1px solid var(--sidebar-line);
+      padding: 14px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .sidebar-section {
+      display: grid;
+      gap: 8px;
+    }
+
+    .sidebar-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--sidebar-muted);
+      padding: 0 8px;
+    }
+
+    .nav-list {
+      display: grid;
+      gap: 2px;
+    }
+
+    .nav-item {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--sidebar-text);
+      text-align: left;
+      border-radius: 9px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: none;
+    }
+
+    .nav-item:hover {
+      background: rgba(255,255,255,0.06);
+    }
+
+    .nav-item.active {
+      background: rgba(10,132,255,0.26);
+      color: #fff;
+    }
+
+    .status {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--sidebar-muted);
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      white-space: pre-wrap;
+    }
+
+    .status.ok { color: #c7f0d1; }
+    .status.error { color: #ffd2cf; }
+
+    .sidebar-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .sidebar-card h2 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.01em;
+    }
+
+    .sidebar-card p,
+    .sidebar-card .meta {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--sidebar-muted);
+      overflow-wrap: anywhere;
+    }
+
+    .sidebar input[type="text"] {
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(17, 22, 29, 0.5);
+      color: #fff;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+
+    .rename-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .rename-row button {
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+
+    .upload-status {
+      display: grid;
+      gap: 8px;
+    }
+
+    .upload-progress {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(17, 22, 29, 0.22);
+    }
+
+    .upload-progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #69b7ff, #0a84ff);
+      transition: width 140ms linear;
+    }
+
+    .upload-stats {
+      display: grid;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--sidebar-muted);
+    }
+
+    .upload-current-file {
+      font-size: 12px;
+      color: var(--sidebar-text);
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    .content {
+      background: var(--content);
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      min-height: 0;
+    }
+
+    .crumbs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 12px 16px 0;
+    }
+
+    .crumb {
+      appearance: none;
+      border: 1px solid rgba(16, 22, 30, 0.08);
+      background: rgba(255,255,255,0.9);
+      color: #2b3642;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: none;
+    }
+
+    .dropzone {
+      margin: 12px 16px;
+      border: 1.5px dashed rgba(10,132,255,0.24);
+      background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(243,246,249,0.9));
+      border-radius: 14px;
+      padding: 18px;
+      display: grid;
+      gap: 8px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .dropzone.dragover {
+      border-color: rgba(10,132,255,0.55);
+      background: linear-gradient(180deg, rgba(230,242,255,0.95), rgba(217,235,255,0.95));
+    }
+
+    .dropzone strong {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1d2a36;
+    }
+
+    .dropzone p {
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 560px;
+    }
+
+    .list-wrap {
+      min-height: 0;
+      overflow: auto;
+      border-top: 1px solid var(--content-line);
+    }
+
+    .header-row,
+    .entry-row {
+      display: grid;
+      grid-template-columns:
+        minmax(320px, 1.9fr)
+        minmax(150px, 0.85fr)
+        minmax(110px, 0.5fr)
+        minmax(110px, 0.55fr)
+        minmax(110px, 0.5fr);
+      gap: 16px;
+      align-items: center;
+      padding: 10px 16px;
+    }
+
+    .header-row {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: rgba(239, 242, 246, 0.98);
+      border-bottom: 1px solid rgba(13,18,26,0.1);
+      font-size: 11px;
+      font-weight: 700;
+      color: #6d7784;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .entry-row {
+      border-bottom: 1px solid var(--content-line);
+      cursor: default;
+      background: rgba(255,255,255,0.66);
+    }
+
+    .entry-row:hover {
+      background: rgba(246, 249, 252, 1);
+    }
+
+    .entry-row.selected {
+      background: rgba(10,132,255,0.14);
+      box-shadow: inset 3px 0 0 rgba(10,132,255,0.9);
+    }
+
+    .name-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .icon {
+      width: 28px;
+      height: 22px;
+      border-radius: 6px;
+      display: inline-grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      flex: 0 0 auto;
+    }
+
+    .icon.dir {
+      background: linear-gradient(180deg, #72b8ff, #4d93eb);
+      color: #fff;
+    }
+
+    .icon.file {
+      background: linear-gradient(180deg, #eef1f4, #dbe2e9);
+      color: #44505e;
+      border: 1px solid rgba(17, 25, 34, 0.08);
+    }
+
+    .name-stack {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .entry-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #18212c;
+      overflow-wrap: anywhere;
+    }
+
+    .entry-path {
+      font-size: 11px;
+      color: #778291;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .cell {
+      font-size: 12px;
+      color: #5f6b79;
+    }
+
+    .cell.muted {
+      color: #7d8794;
+    }
+
+    .cell.right {
+      text-align: right;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .link {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .empty {
+      padding: 28px 16px;
+      color: #6c7784;
+      font-size: 13px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1200px) {
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .body {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--sidebar-line);
+      }
+    }
+
+    @media (max-width: 820px) {
+      .header-row,
+      .entry-row {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="window">
+    <header class="titlebar">
+      <div class="traffic"><span></span><span></span><span></span></div>
+      <div class="title">TSFF Finder</div>
+      <div class="title-meta" id="lastRefresh">Waiting for refresh</div>
+    </header>
+
+    <section class="toolbar">
+      <div class="toolbar-group">
+        <button id="refreshButton" class="secondary" type="button">Refresh</button>
+        <button id="openButton" class="secondary" type="button" disabled>Open</button>
+        <button id="downloadButton" class="secondary" type="button" disabled>Download</button>
+      </div>
+      <input id="currentPathInput" class="pathbar" type="text" readonly>
+      <input id="jumpPathInput" class="jumpbar" type="text" placeholder="/downloads/Audiobooks">
+      <div class="toolbar-group">
+        <span class="badge">Items <strong id="currentFolderCount">0</strong></span>
+        <span class="badge">Selected <strong id="selectedItemLabel">None</strong></span>
+        <span class="badge">Clipboard <strong id="clipboardLabel">Empty</strong></span>
+      </div>
+    </section>
+
+    <section class="body">
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-label">Places</div>
+          <div class="nav-list" id="placesList">
+            <button class="nav-item active" type="button" data-place="/downloads">Downloads</button>
+            <button class="nav-item" type="button" data-place="/downloads/Audiobooks">Audiobooks</button>
+            <button class="nav-item" type="button" data-place="/downloads/Movies">Movies</button>
+            <button class="nav-item" type="button" data-place="/downloads/TV Shows">TV Shows</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-label">Folder</div>
+          <div id="statusBox" class="status">Loading explorer...</div>
+        </div>
+
+        <div class="sidebar-card">
+          <h2>Create Folder</h2>
+          <input id="newFolderInput" type="text" placeholder="New folder name">
+          <button id="createFolderButton" class="primary" type="button">Create Here</button>
+        </div>
+
+        <div class="sidebar-card">
+          <h2>Selected Item</h2>
+          <div id="selectedCard">
+            <p>Click any file or folder row to stage actions.</p>
+          </div>
+          <div class="toolbar-group">
+            <button id="deleteButton" class="danger" type="button" disabled>Delete</button>
+            <button id="stageCopyButton" class="secondary" type="button" disabled>Copy</button>
+            <button id="stageMoveButton" class="secondary" type="button" disabled>Move</button>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <h2>Clipboard</h2>
+          <div id="clipboardCard">
+            <p>Nothing staged. Choose a file or folder, then copy or move it.</p>
+          </div>
+          <div class="toolbar-group">
+            <button id="pasteButton" class="primary" type="button" disabled>Paste Here</button>
+            <button id="clearClipboardButton" class="secondary" type="button" disabled>Clear</button>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <h2>Upload</h2>
+          <p>Drop files or folders into the content area, or choose them manually.</p>
+          <div class="toolbar-group">
+            <button id="pickFilesButton" class="secondary" type="button">Choose Files</button>
+            <button id="pickFolderButton" class="secondary" type="button">Choose Folder</button>
+          </div>
+          <div id="uploadStatusCard" class="upload-status hidden">
+            <div class="upload-progress">
+              <div id="uploadProgressBar" class="upload-progress-bar"></div>
+            </div>
+            <div id="uploadCurrentFile" class="upload-current-file">Preparing upload...</div>
+            <div id="uploadStats" class="upload-stats"></div>
+            <div class="toolbar-group">
+              <button id="cancelUploadButton" class="danger" type="button" disabled>Cancel Upload</button>
+            </div>
+          </div>
+          <input id="filePicker" class="hidden" type="file" multiple>
+          <input id="folderPicker" class="hidden" type="file" webkitdirectory directory multiple>
+        </div>
+      </aside>
+
+      <section class="content">
+        <div class="crumbs" id="breadcrumbs"></div>
+
+        <div class="dropzone" id="dropzone">
+          <strong>Drop new files or folders into this window</strong>
+          <p>This behaves like a server-side Finder surface: browse the VM, drag files in, and use copy or move inside the server without leaving the browser.</p>
+        </div>
+
+        <div class="list-wrap">
+          <div class="header-row">
+            <div>Name</div>
+            <div>Date Modified</div>
+            <div>Kind</div>
+            <div>Size</div>
+            <div style="text-align:right;">Action</div>
+          </div>
+          <div id="entryList"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      currentPath: '/downloads',
+      entries: [],
+      selectedPath: '',
+      clipboard: null,
+      directorySizeCache: new Map(),
+      directorySizePending: new Map(),
+      directorySizeGeneration: 0,
+      upload: {
+        active: false,
+        cancelRequested: false,
+        xhr: null
+      }
+    };
+
+    const els = {
+      currentFolderCount: document.getElementById('currentFolderCount'),
+      selectedItemLabel: document.getElementById('selectedItemLabel'),
+      clipboardLabel: document.getElementById('clipboardLabel'),
+      currentPathInput: document.getElementById('currentPathInput'),
+      jumpPathInput: document.getElementById('jumpPathInput'),
+      lastRefresh: document.getElementById('lastRefresh'),
+      refreshButton: document.getElementById('refreshButton'),
+      breadcrumbs: document.getElementById('breadcrumbs'),
+      statusBox: document.getElementById('statusBox'),
+      dropzone: document.getElementById('dropzone'),
+      filePicker: document.getElementById('filePicker'),
+      folderPicker: document.getElementById('folderPicker'),
+      pickFilesButton: document.getElementById('pickFilesButton'),
+      pickFolderButton: document.getElementById('pickFolderButton'),
+      uploadStatusCard: document.getElementById('uploadStatusCard'),
+      uploadProgressBar: document.getElementById('uploadProgressBar'),
+      uploadCurrentFile: document.getElementById('uploadCurrentFile'),
+      uploadStats: document.getElementById('uploadStats'),
+      cancelUploadButton: document.getElementById('cancelUploadButton'),
+      entryList: document.getElementById('entryList'),
+      newFolderInput: document.getElementById('newFolderInput'),
+      createFolderButton: document.getElementById('createFolderButton'),
+      selectedCard: document.getElementById('selectedCard'),
+      clipboardCard: document.getElementById('clipboardCard'),
+      openButton: document.getElementById('openButton'),
+      downloadButton: document.getElementById('downloadButton'),
+      deleteButton: document.getElementById('deleteButton'),
+      stageCopyButton: document.getElementById('stageCopyButton'),
+      stageMoveButton: document.getElementById('stageMoveButton'),
+      pasteButton: document.getElementById('pasteButton'),
+      clearClipboardButton: document.getElementById('clearClipboardButton'),
+      placesList: document.getElementById('placesList')
+    };
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function normalizePath(value) {
+      if (!value) {
+        return '';
+      }
+      const trimmed = String(value).trim().replace(/\/+/g, '/');
+      if (trimmed === '/') {
+        return '/';
+      }
+      return trimmed.replace(/\/$/, '');
+    }
+
+    function basename(path) {
+      const normalized = normalizePath(path);
+      if (!normalized) {
+        return '';
+      }
+      const lastSlash = normalized.lastIndexOf('/');
+      return lastSlash >= 0 ? normalized.slice(lastSlash + 1) : normalized;
+    }
+
+    function dirname(path) {
+      const normalized = normalizePath(path);
+      if (!normalized || normalized === '/') {
+        return '';
+      }
+      const lastSlash = normalized.lastIndexOf('/');
+      if (lastSlash <= 0) {
+        return '';
+      }
+      return normalized.slice(0, lastSlash);
+    }
+
+    function joinPath(parent, child) {
+      const normalizedParent = normalizePath(parent);
+      const normalizedChild = String(child || '').trim().replace(/^\/+/, '').replace(/\/+$/, '');
+      if (!normalizedParent) {
+        return normalizedChild;
+      }
+      if (!normalizedChild) {
+        return normalizedParent;
+      }
+      return `${normalizedParent}/${normalizedChild}`;
+    }
+
+    function formatBytes(value) {
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let size = Number(value) || 0;
+      let unit = 0;
+      while (size >= 1024 && unit < units.length - 1) {
+        size /= 1024;
+        unit += 1;
+      }
+      return `${size.toFixed(size >= 100 || unit === 0 ? 0 : 1)} ${units[unit]}`;
+    }
+
+    function formatDuration(seconds) {
+      if (!Number.isFinite(seconds) || seconds < 0) {
+        return 'estimating...';
+      }
+      if (seconds < 60) {
+        return `${Math.max(1, Math.round(seconds))}s`;
+      }
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.round(seconds % 60);
+      if (minutes < 60) {
+        return `${minutes}m ${remainingSeconds}s`;
+      }
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return `${hours}h ${remainingMinutes}m`;
+    }
+
+    function formatTimestamp(value) {
+      if (!value) {
+        return 'Unknown';
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return 'Unknown';
+      }
+      return new Intl.DateTimeFormat(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      }).format(date);
+    }
+
+    function encodeDownloadsPath(path) {
+      const normalized = normalizePath(path) || '/downloads';
+      const relative = normalized.replace(/^\/downloads/, '').replace(/^\/+/, '');
+      if (!relative) {
+        return '/__downloads__/';
+      }
+      return `/__downloads__/${relative.split('/').map((part) => encodeURIComponent(part)).join('/')}/`;
+    }
+
+    function toDownloadUrl(path) {
+      const normalized = normalizePath(path);
+      if (!normalized) {
+        return '#';
+      }
+      const relative = normalized.replace(/^\/downloads/, '').replace(/^\/+/, '');
+      return relative
+        ? `/__downloads__/${relative.split('/').map((part) => encodeURIComponent(part)).join('/')}`
+        : '/__downloads__/';
+    }
+
+    function toDeleteUrl(path, type) {
+      const base = toDownloadUrl(path);
+      if (type === 'directory') {
+        return base.endsWith('/') ? base : `${base}/`;
+      }
+      return base;
+    }
+
+    function toTransferUrl(path, type) {
+      const base = toDownloadUrl(path);
+      if (type === 'directory') {
+        return base.endsWith('/') ? base : `${base}/`;
+      }
+      return base;
+    }
+
+    function setStatus(message, kind) {
+      els.statusBox.textContent = message;
+      els.statusBox.className = `status${kind ? ` ${kind}` : ''}`;
+    }
+
+    function getDirectorySizeDisplay(path) {
+      const normalized = normalizePath(path);
+      if (state.directorySizeCache.has(normalized)) {
+        return formatBytes(state.directorySizeCache.get(normalized));
+      }
+      if (state.directorySizePending.has(normalized)) {
+        return 'Calculating...';
+      }
+      return 'Pending...';
+    }
+
+    function invalidateDirectorySizes() {
+      state.directorySizeGeneration += 1;
+      state.directorySizeCache.clear();
+      state.directorySizePending.clear();
+    }
+
+    function renderUploadStatus(progress) {
+      if (!progress) {
+        els.uploadStatusCard.classList.add('hidden');
+        els.uploadProgressBar.style.width = '0%';
+        els.uploadCurrentFile.textContent = 'Preparing upload...';
+        els.uploadStats.textContent = '';
+        els.cancelUploadButton.disabled = true;
+        return;
+      }
+
+      const percent = progress.totalBytes > 0
+        ? Math.min(100, (progress.uploadedBytes / progress.totalBytes) * 100)
+        : 0;
+      const remainingBytes = Math.max(0, progress.totalBytes - progress.uploadedBytes);
+      const speed = progress.elapsedSeconds > 0 ? progress.uploadedBytes / progress.elapsedSeconds : 0;
+      const eta = speed > 0 ? remainingBytes / speed : Number.NaN;
+
+      els.uploadStatusCard.classList.remove('hidden');
+      els.uploadProgressBar.style.width = `${percent.toFixed(1)}%`;
+      els.uploadCurrentFile.textContent = progress.currentLabel || 'Preparing upload...';
+      els.cancelUploadButton.disabled = !state.upload.active || state.upload.cancelRequested;
+      els.uploadStats.innerHTML = `
+        <div>${progress.completedItems}/${progress.totalItems} done • ${percent.toFixed(1)}%</div>
+        <div>${formatBytes(progress.uploadedBytes)} / ${formatBytes(progress.totalBytes)} • ${formatBytes(speed)}/s</div>
+        <div>${remainingBytes > 0 ? `ETA ${formatDuration(eta)}` : 'Finalizing upload...'}</div>
+      `;
+    }
+
+    function uploadFileWithProgress(path, file, onProgress) {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        state.upload.xhr = xhr;
+        xhr.open('PUT', toDownloadUrl(path), true);
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            onProgress(event.loaded, event.total);
+          }
+        };
+        xhr.onload = () => {
+          state.upload.xhr = null;
+          if (xhr.status >= 200 && xhr.status < 300) {
+            onProgress(file.size, file.size);
+            resolve();
+            return;
+          }
+          reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText || 'request failed'}`));
+        };
+        xhr.onerror = () => {
+          state.upload.xhr = null;
+          reject(new Error('network error'));
+        };
+        xhr.onabort = () => {
+          state.upload.xhr = null;
+          reject(new Error('upload aborted'));
+        };
+        xhr.send(file);
+      });
+    }
+
+    function cancelUpload() {
+      if (!state.upload.active) {
+        return;
+      }
+      state.upload.cancelRequested = true;
+      els.cancelUploadButton.disabled = true;
+      setStatus('Cancelling upload...', 'error');
+      if (state.upload.xhr) {
+        state.upload.xhr.abort();
+      }
+    }
+
+    function updateLastRefresh() {
+      els.lastRefresh.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    }
+
+    function normalizeBrowserEntries(payload) {
+      if (!Array.isArray(payload)) {
+        return [];
+      }
+      return payload.map((entry) => {
+        const rawName = String(entry.name || '');
+        const isDirectory =
+          entry.type === 'directory' ||
+          entry.type === 'dir' ||
+          /\/$/.test(rawName);
+        return {
+          name: rawName.replace(/\/$/, ''),
+          type: isDirectory ? 'directory' : 'file',
+          size: Number(entry.size || 0),
+          mtime: entry.mtime || entry.modification_time || ''
+        };
+      }).filter((entry) => entry.name && entry.name !== '.').sort((left, right) =>
+        left.name.localeCompare(right.name, undefined, { sensitivity: 'base', numeric: true })
+      );
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, options);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`HTTP ${response.status}: ${text || 'request failed'}`);
+      }
+      return response;
+    }
+
+    async function calculateDirectorySize(path, generation = state.directorySizeGeneration) {
+      const normalized = normalizePath(path);
+      if (generation !== state.directorySizeGeneration) {
+        return 0;
+      }
+      if (state.directorySizeCache.has(normalized)) {
+        return state.directorySizeCache.get(normalized);
+      }
+      if (state.directorySizePending.has(normalized)) {
+        return state.directorySizePending.get(normalized);
+      }
+      const promise = (async () => {
+        const entries = await listDirectory(normalized);
+        let total = 0;
+        for (const entry of entries) {
+          const childPath = joinPath(normalized, entry.name);
+          if (entry.type === 'directory') {
+            total += await calculateDirectorySize(childPath, generation);
+          } else {
+            total += Number(entry.size || 0);
+          }
+        }
+        if (generation === state.directorySizeGeneration) {
+          state.directorySizeCache.set(normalized, total);
+        }
+        return total;
+      })();
+      state.directorySizePending.set(normalized, promise);
+      try {
+        return await promise;
+      } finally {
+        state.directorySizePending.delete(normalized);
+      }
+    }
+
+    function queueDirectorySize(path) {
+      const normalized = normalizePath(path);
+      if (!normalized || state.directorySizeCache.has(normalized) || state.directorySizePending.has(normalized)) {
+        return;
+      }
+      const generation = state.directorySizeGeneration;
+      calculateDirectorySize(normalized, generation)
+        .then(() => {
+          if (generation === state.directorySizeGeneration && normalizePath(state.currentPath)) {
+            renderEntries();
+          }
+        })
+        .catch(() => {});
+    }
+
+    function renderBreadcrumbs() {
+      const current = normalizePath(state.currentPath) || '/downloads';
+      const segments = current.replace(/^\/+/, '').split('/').filter(Boolean);
+      let running = '';
+      const crumbs = segments.map((segment) => {
+        running = running ? `${running}/${segment}` : `/${segment}`;
+        return { label: segment, path: running };
+      });
+      els.breadcrumbs.innerHTML = crumbs.map((crumb, index) => `
+        <button class="crumb" type="button" data-path="${escapeHtml(crumb.path)}">${index === 0 ? '/' : ''}${escapeHtml(crumb.label)}</button>
+      `).join('');
+    }
+
+    function renderPlaces() {
+      Array.from(els.placesList.querySelectorAll('[data-place]')).forEach((button) => {
+        const active = normalizePath(button.getAttribute('data-place')) === normalizePath(state.currentPath);
+        button.classList.toggle('active', active);
+      });
+    }
+
+    function renderSelectedCard() {
+      const selected = state.entries.find((entry) => joinPath(state.currentPath, entry.name) === state.selectedPath);
+      if (!selected) {
+        els.selectedCard.innerHTML = '<p>Click any file or folder row to stage actions.</p>';
+        els.selectedItemLabel.textContent = 'None';
+        els.openButton.disabled = true;
+        els.downloadButton.disabled = true;
+        els.deleteButton.disabled = true;
+        els.stageCopyButton.disabled = true;
+        els.stageMoveButton.disabled = true;
+        return;
+      }
+      const fullPath = joinPath(state.currentPath, selected.name);
+      els.selectedCard.innerHTML = `
+        <div class="entry-name">${escapeHtml(selected.name)}</div>
+        <div class="meta">${selected.type === 'directory' ? 'Folder' : 'File'}</div>
+        <div class="meta">Modified ${escapeHtml(formatTimestamp(selected.mtime))}</div>
+        <div class="meta">${selected.type === 'directory' ? getDirectorySizeDisplay(fullPath) : formatBytes(selected.size)}</div>
+        <div class="meta">${escapeHtml(fullPath)}</div>
+        <div class="rename-row">
+          <input id="selectedRenameInput" type="text" value="${escapeHtml(selected.name)}" placeholder="Rename ${selected.type}">
+          <button id="selectedRenameButton" class="secondary" type="button">Rename</button>
+        </div>
+      `;
+      if (selected.type === 'directory') {
+        queueDirectorySize(fullPath);
+      }
+      els.selectedItemLabel.textContent = selected.name;
+      els.openButton.disabled = selected.type !== 'directory';
+      els.downloadButton.disabled = false;
+      els.deleteButton.disabled = false;
+      els.stageCopyButton.disabled = false;
+      els.stageMoveButton.disabled = false;
+    }
+
+    async function renameSelected() {
+      if (!state.selectedPath) {
+        setStatus('Select a file or folder first.', 'error');
+        return;
+      }
+      const input = document.getElementById('selectedRenameInput');
+      const selected = state.entries.find((entry) => joinPath(state.currentPath, entry.name) === state.selectedPath);
+      if (!selected || !input) {
+        setStatus('Selected item is no longer available.', 'error');
+        return;
+      }
+      const nextName = String(input.value || '').trim();
+      if (!nextName) {
+        setStatus('New name cannot be empty.', 'error');
+        return;
+      }
+      if (nextName === selected.name) {
+        setStatus('Name is unchanged.', 'error');
+        return;
+      }
+      const sourcePath = normalizePath(state.selectedPath);
+      const targetPath = joinPath(dirname(sourcePath), nextName);
+      const button = document.getElementById('selectedRenameButton');
+      if (button) {
+        button.disabled = true;
+      }
+      setStatus(`Renaming ${selected.name} ...`);
+      try {
+        await api(toTransferUrl(sourcePath, selected.type), {
+          method: 'MOVE',
+          headers: {
+            Destination: toTransferUrl(targetPath, selected.type),
+            Overwrite: 'T'
+          }
+        });
+        state.selectedPath = targetPath;
+        await loadPath(state.currentPath, { preserveStatus: true });
+        setStatus(`Renamed to ${nextName}.`, 'ok');
+      } catch (error) {
+        setStatus(`Rename failed.\n${error.message}`, 'error');
+      } finally {
+        if (button) {
+          button.disabled = false;
+        }
+      }
+    }
+
+    function renderClipboardCard() {
+      if (!state.clipboard) {
+        els.clipboardCard.innerHTML = '<p>Nothing staged. Choose a file or folder, then copy or move it.</p>';
+        els.clipboardLabel.textContent = 'Empty';
+        els.pasteButton.disabled = true;
+        els.clearClipboardButton.disabled = true;
+        return;
+      }
+      els.clipboardCard.innerHTML = `
+        <div class="entry-name">${escapeHtml(basename(state.clipboard.path))}</div>
+        <div class="meta">${state.clipboard.mode === 'copy' ? 'Ready to copy here' : 'Ready to move here'}</div>
+        <div class="meta">${escapeHtml(state.clipboard.path)}</div>
+      `;
+      els.clipboardLabel.textContent = state.clipboard.mode === 'copy' ? 'Copy' : 'Move';
+      els.pasteButton.disabled = false;
+      els.clearClipboardButton.disabled = false;
+    }
+
+    function renderEntries() {
+      els.currentPathInput.value = state.currentPath;
+      els.currentFolderCount.textContent = String(state.entries.length);
+      renderBreadcrumbs();
+      renderPlaces();
+      renderSelectedCard();
+      renderClipboardCard();
+
+      if (!state.entries.length) {
+        els.entryList.innerHTML = '<div class="empty">This folder is empty.</div>';
+        return;
+      }
+
+      els.entryList.innerHTML = state.entries.map((entry) => {
+        const fullPath = joinPath(state.currentPath, entry.name);
+        const selected = state.selectedPath === fullPath ? ' selected' : '';
+        const sizeDisplay = entry.type === 'directory' ? getDirectorySizeDisplay(fullPath) : formatBytes(entry.size);
+        if (entry.type === 'directory') {
+          queueDirectorySize(fullPath);
+        }
+        return `
+          <div class="entry-row${selected}" data-path="${escapeHtml(fullPath)}" data-type="${escapeHtml(entry.type)}">
+            <div class="name-cell">
+              <span class="icon ${entry.type === 'directory' ? 'dir' : 'file'}">${entry.type === 'directory' ? '' : 'FILE'}</span>
+              <div class="name-stack">
+                <div class="entry-name">${escapeHtml(entry.name)}</div>
+                <div class="entry-path">${escapeHtml(fullPath)}</div>
+              </div>
+            </div>
+            <div class="cell muted">${escapeHtml(formatTimestamp(entry.mtime))}</div>
+            <div class="cell">${entry.type === 'directory' ? 'Folder' : 'File'}</div>
+            <div class="cell">${sizeDisplay}</div>
+            <div class="actions">
+              ${entry.type === 'directory'
+                ? `<a class="link" href="#" data-open-path="${escapeHtml(fullPath)}">Open</a>`
+                : `<a class="link" href="${escapeHtml(toDownloadUrl(fullPath))}" target="_blank" rel="noreferrer">Open</a>`}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function loadPath(path, { preserveStatus = false } = {}) {
+      const target = normalizePath(path) || '/downloads';
+      if (!preserveStatus) {
+        setStatus(`Loading ${target} ...`);
+      }
+      invalidateDirectorySizes();
+      const response = await api(encodeDownloadsPath(target));
+      state.currentPath = target;
+      state.entries = normalizeBrowserEntries(await response.json());
+      const validSelected = state.entries.some((entry) => joinPath(target, entry.name) === state.selectedPath);
+      if (!validSelected) {
+        state.selectedPath = '';
+      }
+      renderEntries();
+      updateLastRefresh();
+      if (!preserveStatus) {
+        setStatus(`Loaded ${state.entries.length} item(s).`, 'ok');
+      }
+    }
+
+    function selectPath(path) {
+      state.selectedPath = path;
+      renderEntries();
+    }
+
+    async function createFolder() {
+      const name = String(els.newFolderInput.value || '').trim().replaceAll('/', '');
+      if (!name) {
+        setStatus('Enter a folder name first.', 'error');
+        return;
+      }
+      const target = joinPath(state.currentPath, name);
+      els.createFolderButton.disabled = true;
+      setStatus(`Creating ${target} ...`);
+      try {
+        await api(encodeDownloadsPath(target), { method: 'MKCOL' });
+        els.newFolderInput.value = '';
+        await loadPath(state.currentPath, { preserveStatus: true });
+        setStatus(`Created ${target}.`, 'ok');
+      } catch (error) {
+        setStatus(`Create folder failed.\n${error.message}`, 'error');
+      } finally {
+        els.createFolderButton.disabled = false;
+      }
+    }
+
+    function stageClipboard(mode) {
+      if (!state.selectedPath) {
+        setStatus('Select a file or folder first.', 'error');
+        return;
+      }
+      const selected = state.entries.find((entry) => joinPath(state.currentPath, entry.name) === state.selectedPath);
+      state.clipboard = { path: state.selectedPath, mode, type: selected?.type || 'file' };
+      renderClipboardCard();
+      setStatus(`${mode === 'copy' ? 'Copy' : 'Move'} staged for ${state.selectedPath}.`, 'ok');
+    }
+
+    async function pasteClipboard() {
+      if (!state.clipboard) {
+        return;
+      }
+      const sourcePath = normalizePath(state.clipboard.path);
+      const targetPath = joinPath(state.currentPath, basename(sourcePath));
+      if (normalizePath(dirname(sourcePath)) === normalizePath(state.currentPath)) {
+        setStatus('Source is already inside this folder.', 'error');
+        return;
+      }
+      els.pasteButton.disabled = true;
+      setStatus(`${state.clipboard.mode === 'copy' ? 'Copying' : 'Moving'} to ${state.currentPath} ...`);
+      try {
+        await api(toTransferUrl(sourcePath, state.clipboard.type || 'file'), {
+          method: state.clipboard.mode === 'copy' ? 'COPY' : 'MOVE',
+          headers: {
+            Destination: toTransferUrl(targetPath, state.clipboard.type || 'file'),
+            Overwrite: 'T'
+          }
+        });
+        const completedMode = state.clipboard.mode;
+        state.clipboard = null;
+        renderClipboardCard();
+        await loadPath(state.currentPath, { preserveStatus: true });
+        setStatus(`${completedMode === 'copy' ? 'Copied' : 'Moved'} into ${state.currentPath}.`, 'ok');
+      } catch (error) {
+        setStatus(`Paste failed.\n${error.message}`, 'error');
+      } finally {
+        els.pasteButton.disabled = false;
+      }
+    }
+
+    async function listDirectory(path) {
+      const response = await api(encodeDownloadsPath(path));
+      return normalizeBrowserEntries(await response.json());
+    }
+
+    async function deletePathRecursive(path, type, progress = { deleted: 0 }) {
+      const normalizedPath = normalizePath(path);
+      if (type === 'directory') {
+        const children = await listDirectory(normalizedPath);
+        for (const child of children) {
+          const childPath = joinPath(normalizedPath, child.name);
+          setStatus(`Deleting ${childPath} ...`);
+          await deletePathRecursive(childPath, child.type, progress);
+        }
+      }
+      await api(toDeleteUrl(normalizedPath, type), { method: 'DELETE' });
+      progress.deleted += 1;
+      return progress;
+    }
+
+    async function deleteSelected() {
+      if (!state.selectedPath) {
+        setStatus('Select a file or folder first.', 'error');
+        return;
+      }
+      const selected = state.entries.find((entry) => joinPath(state.currentPath, entry.name) === state.selectedPath);
+      if (!selected) {
+        setStatus('Selected item is no longer available.', 'error');
+        return;
+      }
+      const targetPath = normalizePath(state.selectedPath);
+      const selectedName = basename(state.selectedPath);
+      if (!window.confirm(`Delete ${selectedName}?`)) {
+        return;
+      }
+      els.deleteButton.disabled = true;
+      setStatus(`Deleting ${state.selectedPath} ...`);
+      try {
+        await deletePathRecursive(targetPath, selected?.type || 'file');
+        state.selectedPath = '';
+        if (state.clipboard && normalizePath(state.clipboard.path) === targetPath) {
+          state.clipboard = null;
+        }
+        renderClipboardCard();
+        await loadPath(state.currentPath, { preserveStatus: true });
+        setStatus(`Deleted ${selectedName}.`, 'ok');
+      } catch (error) {
+        setStatus(`Delete failed.\n${error.message}`, 'error');
+      } finally {
+        els.deleteButton.disabled = false;
+      }
+    }
+
+    async function uploadItems(items) {
+      if (!items.length) {
+        return;
+      }
+      if (state.upload.active) {
+        setStatus('Another upload is already running.', 'error');
+        return;
+      }
+      const totalBytes = items.reduce((sum, item) => sum + (Number(item.file.size) || 0), 0);
+      const startedAt = Date.now();
+      let completedBytes = 0;
+      let completedItems = 0;
+      state.upload.active = true;
+      state.upload.cancelRequested = false;
+      state.upload.xhr = null;
+
+      renderUploadStatus({
+        totalItems: items.length,
+        completedItems: 0,
+        totalBytes,
+        uploadedBytes: 0,
+        elapsedSeconds: 0,
+        currentLabel: `Starting upload into ${state.currentPath}`
+      });
+      setStatus(`Uploading ${items.length} item(s) into ${state.currentPath} ...`);
+      els.pickFilesButton.disabled = true;
+      els.pickFolderButton.disabled = true;
+      try {
+        for (const item of items) {
+          if (state.upload.cancelRequested) {
+            throw new Error('upload cancelled');
+          }
+          const targetPath = joinPath(state.currentPath, item.relativePath || item.file.name);
+          await uploadFileWithProgress(targetPath, item.file, (loaded) => {
+            const uploadedBytes = completedBytes + loaded;
+            renderUploadStatus({
+              totalItems: items.length,
+              completedItems,
+              totalBytes,
+              uploadedBytes,
+              elapsedSeconds: Math.max(0.001, (Date.now() - startedAt) / 1000),
+              currentLabel: `Uploading ${item.relativePath || item.file.name}`
+            });
+          });
+          completedBytes += Number(item.file.size) || 0;
+          completedItems += 1;
+          renderUploadStatus({
+            totalItems: items.length,
+            completedItems,
+            totalBytes,
+            uploadedBytes: completedBytes,
+            elapsedSeconds: Math.max(0.001, (Date.now() - startedAt) / 1000),
+            currentLabel: completedItems < items.length
+              ? `Queued next item...`
+              : `Finishing upload...`
+          });
+        }
+        await loadPath(state.currentPath, { preserveStatus: true });
+        setStatus(`Uploaded ${items.length} item(s).`, 'ok');
+        renderUploadStatus({
+          totalItems: items.length,
+          completedItems: items.length,
+          totalBytes,
+          uploadedBytes: totalBytes,
+          elapsedSeconds: Math.max(0.001, (Date.now() - startedAt) / 1000),
+          currentLabel: `Uploaded ${items.length} item(s) successfully`
+        });
+      } catch (error) {
+        if (state.upload.cancelRequested || error.message === 'upload cancelled' || error.message === 'upload aborted') {
+          setStatus('Upload cancelled.', 'error');
+          renderUploadStatus({
+            totalItems: items.length,
+            completedItems,
+            totalBytes,
+            uploadedBytes: completedBytes,
+            elapsedSeconds: Math.max(0.001, (Date.now() - startedAt) / 1000),
+            currentLabel: `Cancelled after ${completedItems} item(s)`
+          });
+        } else {
+          setStatus(`Upload failed.\n${error.message}`, 'error');
+          renderUploadStatus({
+            totalItems: items.length,
+            completedItems,
+            totalBytes,
+            uploadedBytes: completedBytes,
+            elapsedSeconds: Math.max(0.001, (Date.now() - startedAt) / 1000),
+            currentLabel: `Upload failed on ${items[completedItems]?.relativePath || items[completedItems]?.file?.name || 'current file'}`
+          });
+        }
+      } finally {
+        state.upload.active = false;
+        state.upload.cancelRequested = false;
+        state.upload.xhr = null;
+        els.pickFilesButton.disabled = false;
+        els.pickFolderButton.disabled = false;
+        els.cancelUploadButton.disabled = true;
+      }
+    }
+
+    function collectInputFiles(fileList) {
+      return Array.from(fileList || []).map((file) => ({
+        file,
+        relativePath: String(file.webkitRelativePath || file.name).replace(/^\/+/, '')
+      }));
+    }
+
+    async function readEntry(entry, prefix = '') {
+      if (entry.isFile) {
+        return new Promise((resolve, reject) => {
+          entry.file((file) => resolve([{ file, relativePath: `${prefix}${file.name}` }]), reject);
+        });
+      }
+      if (!entry.isDirectory) {
+        return [];
+      }
+      const reader = entry.createReader();
+      const directoryPrefix = `${prefix}${entry.name}/`;
+      const children = [];
+      while (true) {
+        const batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+        if (!batch.length) {
+          break;
+        }
+        children.push(...batch);
+      }
+      const nested = await Promise.all(children.map((child) => readEntry(child, directoryPrefix)));
+      return nested.flat();
+    }
+
+    async function collectDroppedItems(dataTransfer) {
+      const items = Array.from(dataTransfer.items || []);
+      const withEntries = items.filter((item) => typeof item.webkitGetAsEntry === 'function');
+      if (withEntries.length) {
+        const files = await Promise.all(withEntries.map((item) => {
+          const entry = item.webkitGetAsEntry();
+          return entry ? readEntry(entry) : [];
+        }));
+        return files.flat();
+      }
+      return Array.from(dataTransfer.files || []).map((file) => ({ file, relativePath: file.name }));
+    }
+
+    els.refreshButton.addEventListener('click', () => {
+      loadPath(state.currentPath).catch((error) => {
+        setStatus(`Refresh failed.\n${error.message}`, 'error');
+      });
+    });
+
+    els.breadcrumbs.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-path]');
+      if (!button) {
+        return;
+      }
+      loadPath(button.getAttribute('data-path') || '/downloads').catch((error) => {
+        setStatus(`Folder load failed.\n${error.message}`, 'error');
+      });
+    });
+
+    els.placesList.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-place]');
+      if (!button) {
+        return;
+      }
+      loadPath(button.getAttribute('data-place') || '/downloads').catch((error) => {
+        setStatus(`Folder load failed.\n${error.message}`, 'error');
+      });
+    });
+
+    els.entryList.addEventListener('click', (event) => {
+      const row = event.target.closest('[data-path]');
+      if (!row) {
+        return;
+      }
+      const path = row.getAttribute('data-path') || '';
+      const type = row.getAttribute('data-type') || 'file';
+      if (event.target.matches('[data-open-path]')) {
+        event.preventDefault();
+        loadPath(path).catch((error) => {
+          setStatus(`Folder load failed.\n${error.message}`, 'error');
+        });
+        return;
+      }
+      selectPath(path);
+      if (event.detail >= 2 && type === 'directory') {
+        loadPath(path).catch((error) => {
+          setStatus(`Folder load failed.\n${error.message}`, 'error');
+        });
+      }
+    });
+    els.selectedCard.addEventListener('click', (event) => {
+      if (event.target.id === 'selectedRenameButton') {
+        renameSelected();
+      }
+    });
+    els.selectedCard.addEventListener('keydown', (event) => {
+      if (event.target.id === 'selectedRenameInput' && event.key === 'Enter') {
+        renameSelected();
+      }
+    });
+
+    els.jumpPathInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') {
+        return;
+      }
+      loadPath(els.jumpPathInput.value).catch((error) => {
+        setStatus(`Folder load failed.\n${error.message}`, 'error');
+      });
+    });
+
+    els.createFolderButton.addEventListener('click', createFolder);
+    els.newFolderInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        createFolder();
+      }
+    });
+    els.openButton.addEventListener('click', () => {
+      if (state.selectedPath) {
+        loadPath(state.selectedPath).catch((error) => {
+          setStatus(`Folder load failed.\n${error.message}`, 'error');
+        });
+      }
+    });
+    els.downloadButton.addEventListener('click', () => {
+      if (state.selectedPath) {
+        window.open(toDownloadUrl(state.selectedPath), '_blank', 'noopener');
+      }
+    });
+    els.deleteButton.addEventListener('click', deleteSelected);
+    els.stageCopyButton.addEventListener('click', () => stageClipboard('copy'));
+    els.stageMoveButton.addEventListener('click', () => stageClipboard('move'));
+    els.pasteButton.addEventListener('click', pasteClipboard);
+    els.clearClipboardButton.addEventListener('click', () => {
+      state.clipboard = null;
+      renderClipboardCard();
+      setStatus('Clipboard cleared.', 'ok');
+    });
+    els.pickFilesButton.addEventListener('click', () => els.filePicker.click());
+    els.pickFolderButton.addEventListener('click', () => els.folderPicker.click());
+    els.cancelUploadButton.addEventListener('click', cancelUpload);
+    els.filePicker.addEventListener('change', () => {
+      uploadItems(collectInputFiles(els.filePicker.files)).finally(() => {
+        els.filePicker.value = '';
+      });
+    });
+    els.folderPicker.addEventListener('change', () => {
+      uploadItems(collectInputFiles(els.folderPicker.files)).finally(() => {
+        els.folderPicker.value = '';
+      });
+    });
+
+    ['dragenter', 'dragover'].forEach((eventName) => {
+      els.dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        els.dropzone.classList.add('dragover');
+      });
+    });
+    ['dragleave', 'dragend', 'drop'].forEach((eventName) => {
+      els.dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        els.dropzone.classList.remove('dragover');
+      });
+    });
+    els.dropzone.addEventListener('drop', async (event) => {
+      try {
+        const items = await collectDroppedItems(event.dataTransfer);
+        await uploadItems(items);
+      } catch (error) {
+        setStatus(`Drop upload failed.\n${error.message}`, 'error');
+      }
+    });
+
+    loadPath(state.currentPath).catch((error) => {
+      setStatus(`Initial load failed.\n${error.message}`, 'error');
+    });
+  </script>
+</body>
+</html>
